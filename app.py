@@ -28,14 +28,8 @@ class MLApp:
         # Create menu bar
         self.create_menu()
         
-        # Main container with grid layout
-        self.main_frame = tb.Frame(root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Configure grid weights
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Data preview expands
-        self.main_frame.grid_rowconfigure(5, weight=1)  # Plot controls expand
-        self.main_frame.grid_columnconfigure(0, weight=1)
+        # Create main scrollable container
+        self.create_scrollable_frame()
         
         # Widgets
         self.create_widgets()
@@ -57,6 +51,91 @@ class MLApp:
         menubar.add_cascade(label="Help", menu=help_menu)
         
         self.root.config(menu=menubar)
+
+    def create_scrollable_frame(self):
+        # Create main container frame
+        self.container = tb.Frame(self.root)
+        self.container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Create canvas and scrollbar
+        self.canvas = tk.Canvas(self.container, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self.container, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tb.Frame(self.canvas)
+        
+        # Configure scrolling
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        
+        # Create window in canvas
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        # Bind mousewheel to canvas and root for better scrolling
+        self.canvas.bind("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind("<Button-4>", self._on_mousewheel)
+        self.canvas.bind("<Button-5>", self._on_mousewheel)
+        self.root.bind("<MouseWheel>", self._on_mousewheel)
+        
+        # Bind keyboard navigation
+        self.root.bind("<Prior>", self._on_page_scroll)  # Page Up
+        self.root.bind("<Next>", self._on_page_scroll)   # Page Down
+        self.root.bind("<Home>", self._on_home_end)      # Home
+        self.root.bind("<End>", self._on_home_end)       # End
+        self.root.bind("<Up>", self._on_arrow_scroll)    # Up Arrow
+        self.root.bind("<Down>", self._on_arrow_scroll)  # Down Arrow
+        
+        # Bind canvas resize to update scrollable frame width
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        
+        # Make canvas focusable for keyboard events
+        self.canvas.focus_set()
+        
+        # Set main_frame to scrollable_frame for compatibility
+        self.main_frame = self.scrollable_frame
+        
+        # Configure grid weights for the scrollable frame
+        self.main_frame.grid_rowconfigure(3, weight=1)  # Data preview expands
+        self.main_frame.grid_rowconfigure(5, weight=1)  # Plot controls expand
+        self.main_frame.grid_columnconfigure(0, weight=1)
+
+    def _on_mousewheel(self, event):
+        # Handle mouse wheel scrolling
+        if event.num == 4 or event.delta > 0:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5 or event.delta < 0:
+            self.canvas.yview_scroll(1, "units")
+
+    def _on_page_scroll(self, event):
+        # Handle Page Up/Down scrolling
+        if event.keysym == "Prior":  # Page Up
+            self.canvas.yview_scroll(-5, "units")
+        elif event.keysym == "Next":  # Page Down
+            self.canvas.yview_scroll(5, "units")
+
+    def _on_home_end(self, event):
+        # Handle Home/End scrolling
+        if event.keysym == "Home":
+            self.canvas.yview_moveto(0)  # Scroll to top
+        elif event.keysym == "End":
+            self.canvas.yview_moveto(1)  # Scroll to bottom
+
+    def _on_arrow_scroll(self, event):
+        # Handle arrow key scrolling
+        if event.keysym == "Up":
+            self.canvas.yview_scroll(-1, "units")
+        elif event.keysym == "Down":
+            self.canvas.yview_scroll(1, "units")
+
+    def _on_canvas_configure(self, event):
+        # Update the scrollable frame width when canvas is resized
+        canvas_width = event.width
+        self.canvas.itemconfig(self.canvas_window, width=canvas_width)
 
     def create_widgets(self):
         # File Upload Frame (row 0)

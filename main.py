@@ -5,7 +5,7 @@ import tkinter as tk
 
 if __name__ == "__main__":
     # root= tk.Tk()
-    root = tb.Window(themename="pulse")
+    root = tb.Window(themename="pulse" )
     # root = tb.Window(themename="solar")
     # root = tb.Window(themename="darkly")
     # root = tb.Window(themename="yeti")
